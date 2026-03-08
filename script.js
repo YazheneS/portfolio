@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  document.body.classList.add("preload");
+
   const nav = document.querySelector(".site-nav");
   const navToggle = document.querySelector(".nav-toggle");
   const navLinks = Array.from(document.querySelectorAll('.site-nav a[href^="#"]'));
@@ -54,6 +56,11 @@ document.addEventListener("DOMContentLoaded", () => {
   sections.forEach((section) => sectionObserver.observe(section));
 
   const revealEls = document.querySelectorAll(".reveal");
+  revealEls.forEach((el, index) => {
+    const delay = Math.min(index * 0.04, 0.28);
+    el.style.setProperty("--reveal-delay", `${delay}s`);
+  });
+
   const revealObserver = new IntersectionObserver(
     (entries, observer) => {
       entries.forEach((entry) => {
@@ -67,6 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   revealEls.forEach((el) => revealObserver.observe(el));
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.body.classList.remove("preload");
+    });
+  });
 
   const year = document.getElementById("year");
   if (year) {
