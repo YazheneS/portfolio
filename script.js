@@ -1,63 +1,89 @@
-// Improved interactions: accessible menu, smooth scroll, reveal on scroll, contact mailto
 document.addEventListener("DOMContentLoaded", () => {
-  const navToggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".site-nav");
-  if (navToggle && nav) {
+  const navToggle = document.querySelector(".nav-toggle");
+  const navLinks = Array.from(document.querySelectorAll('.site-nav a[href^="#"]'));
+  const sections = navLinks
+    .map((link) => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean);
+
+  if (nav && navToggle) {
     navToggle.addEventListener("click", () => {
       const expanded = navToggle.getAttribute("aria-expanded") === "true";
       navToggle.setAttribute("aria-expanded", String(!expanded));
-      nav.style.display = expanded ? "" : "flex";
+      nav.classList.toggle("is-open", !expanded);
     });
   }
 
-  // Set current year
-  const year = document.getElementById("year");
-  if (year) year.textContent = new Date().getFullYear();
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const targetSelector = link.getAttribute("href");
+      if (!targetSelector) return;
+      const target = document.querySelector(targetSelector);
+      if (!target) return;
 
-  // Smooth scroll for internal links
-  document.querySelectorAll('a[href^="#"]').forEach((a) => {
-    a.addEventListener("click", (e) => {
-      const href = a.getAttribute("href");
-      if (href && href.startsWith("#")) {
-        const target = document.querySelector(href);
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      if (nav && navToggle) {
+        nav.classList.remove("is-open");
+        navToggle.setAttribute("aria-expanded", "false");
       }
     });
   });
 
-  // Reveal on scroll (lightweight)
-  const observers = [];
-  const reveal = (el) => el.classList.add("reveal");
-  const opts = { threshold: 0.08 };
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((en) => {
-      if (en.isIntersecting) {
-        reveal(en.target);
-        io.unobserve(en.target);
-      }
+  const setActiveNav = (id) => {
+    navLinks.forEach((link) => {
+      link.classList.toggle("active", link.getAttribute("href") === `#${id}`);
     });
-  }, opts);
-  document
-    .querySelectorAll(".card, .hero-content, .about, .contact")
-    .forEach((el) => io.observe(el));
+  };
 
-  // Contact form: default mail client with prefilled message
+  const sectionObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.target.id) {
+          setActiveNav(entry.target.id);
+        }
+      });
+    },
+    {
+      rootMargin: "-40% 0px -50% 0px",
+      threshold: 0.1,
+    },
+  );
+
+  sections.forEach((section) => sectionObserver.observe(section));
+
+  const revealEls = document.querySelectorAll(".reveal");
+  const revealObserver = new IntersectionObserver(
+    (entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12 },
+  );
+
+  revealEls.forEach((el) => revealObserver.observe(el));
+
+  const year = document.getElementById("year");
+  if (year) {
+    year.textContent = new Date().getFullYear();
+  }
+
   const form = document.getElementById("contactForm");
   if (form) {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const data = new FormData(form);
-      const name = data.get("name") || "";
-      const email = data.get("email") || "";
-      const message = data.get("message") || "";
-      const subject = encodeURIComponent("Contact from portfolio: " + name);
-      const body = encodeURIComponent(
-        `Name: ${name}%0AEmail: ${email}%0A%0AMessage:%0A${message}`,
-      );
-      // default to YAZHENE's email from resume
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const name = String(formData.get("name") || "").trim();
+      const email = String(formData.get("email") || "").trim();
+      const message = String(formData.get("message") || "").trim();
+
+      const subject = encodeURIComponent(`Portfolio Contact: ${name || "Visitor"}`);
+      const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
       window.location.href = `mailto:yazh.yazhene@gmail.com?subject=${subject}&body=${body}`;
     });
   }
